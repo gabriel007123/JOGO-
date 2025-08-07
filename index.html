@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Shooter</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="stars"></div>
+        <div id="player">
+            <svg viewBox="0 0 24 24">
+                <path d="M12,2L4,12L12,22L20,12L12,2Z" />
+            </svg>
+        </div>
+        <div id="score-display">Score: 0</div>
+        <div id="lives-display">Lives: 3</div>
+        <div id="game-over">
+            <h1>Game Over</h1>
+            <p id="final-score">Your score: 0</p>
+            <button id="restart-button">Play Again</button>
+        </div>
+        <div id="controls">
+            <div class="control-button" id="left-button">←</div>
+            <div class="control-button" id="shoot-button">↑</div>
+            <div class="control-button" id="right-button">→</div>
+        </div>
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const player = document.getElementById('player');
+        const scoreDisplay = document.getElementById('score-display');
+        const livesDisplay = document.getElementById('lives-display');
+        const gameOverScreen = document.getElementById('game-over');
+        const finalScore = document.getElementById('final-score');
+        const restartButton = document.getElementById('restart-button');
+        const leftButton = document.getElementById('left-button');
+        const rightButton = document.getElementById('right-button');
+        const shootButton = document.getElementById('shoot-button');
+        const starsContainer = document.getElementById('stars');
+
+        let score = 0;
+        let lives = 3;
+        let gameRunning = true;
+        let playerX = window.innerWidth / 2;
+        let playerSpeed = 8;
+        let lasers = [];
+        let meteors = [];
+        let animationId;
+        let meteorSpawnRate = 80; // frames between meteor spawns
+        let frameCount = 0;
+        let keysPressed = {};
+        let touchX = null;
+
+        // Criar estrelas de fundo
+        function createStars() {
+            const starCount = 200;
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.classList.add('star');
+                star.style.width = `${Math.random() * 3}px`;
+                star.style.height = star.style.width;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.opacity = Math.random();
+                starsContainer.appendChild(star);
+            }
+        }
+
+        // Movimento da nave
+        function movePlayer() {
+            if (keysPressed['ArrowLeft'] || keysPressed['a']) {
+                playerX -= playerSpeed;
+            }
+            if (keysPressed['ArrowRight'] || keysPressed['d']) {
+                playerX += playerSpeed;
+            }
+
+            // Limitar movimento às bordas da tela
+            playerX = Math.max(25, Math.min(window.innerWidth - 25, playerX));
+
+            player.style.left = `${playerX}px`;
+        }
+
+        // Disparar lasers
+        function shootLaser() {
+            if (!gameRunning) return;
+            
+            const laser = document.createElement('div');
+            laser.classList.add('laser');
+            laser.style.left = `${playerX}px`;
+            laser.style.bottom = '80px';
+            gameContainer.appendChild(laser);
+            
+            lasers.push({
+                element: laser,
+                x: playerX,
+                y: window.innerHeight - 80,
+                speed: -10
+            });
+        }
+
+        // Criar meteoros
+        function createMeteor() {
+            const size = 20 + Math.random() * 30;
+            const meteor = document.createElement('div');
+            meteor.classList.add('meteor');
+            meteor.style.width = `${size}px`;
+            meteor.style.height = `${size}px`;
+            meteor.style.left = `${Math.random() * (window.innerWidth - size)}px`;
+            meteor.style.top = `-${size}px`;
+            meteor.innerHTML = '🪨';
+            gameContainer.appendChild(meteor);
+            
+            meteors.push({
+                element: meteor,
+                x: parseFloat(meteor.style.left),
+                y: -size,
+                speed: 3 + Math.random() * 3,
+                width: size,
+                height: size
+            });
+        }
+
+        // Atualizar lasers
+        function updateLasers() {
+            lasers.forEach((laser, index) => {
+                laser.y += laser.speed;
+                laser.element.style.bottom = `${window.innerHeight - laser.y}px`;
+                
+                // Remover lasers que saíram da tela
+                if (laser.y < 0) {
+                    gameContainer.removeChild(laser.element);
+                    lasers.splice(index, 1);
+                }
+            });
+        }
+
+        // Atualizar meteoros
+        function updateMeteors() {
+            meteors.forEach((meteor, index) => {
+                meteor.y += meteor.speed;
+                meteor.element.style.top = `${meteor.y}px`;
+                
+                // Verificar se o meteoro saiu da tela
+                if (meteor.y > window.innerHeight) {
+                    gameContainer.removeChild(meteor.element);
+                    meteors.splice(index, 1);
+                }
+                
+                // Verificar colisão com a nave
+                if (
+                    meteor.y + meteor.height > window.innerHeight - 70 &&
+                    meteor.x + meteor.width > playerX - 25 &&
+                    meteor.x < playerX + 25
+                ) {
+                    // Colisão com a nave
+                    createExplosion(meteor.x + meteor.width/2, meteor.y);
+                    gameContainer.removeChild(meteor.element);
+                    meteors.splice(index, 1);
+                    loseLife();
+                }
+            });
+        }
+
+        // Verificar colisões entre lasers e meteoros
+        function checkCollisions() {
+            lasers.forEach((laser, laserIndex) => {
+                meteors.forEach((meteor, meteorIndex) => {
+                    if (
+                        laser.x > meteor.x - 5 &&
+                        laser.x < meteor.x + meteor.width + 5 &&
+                        laser.y < meteor.y + meteor.height
+                    ) {
+                        // Colisão detectada
+                        createExplosion(meteor.x + meteor.width/2, meteor.y);
+                        gameContainer.removeChild(meteor.element);
+                        meteors.splice(meteorIndex, 1);
+                        
+                        gameContainer.removeChild(laser.element);
+                        lasers.splice(laserIndex, 1);
+                        
+                        score += 10;
+                        scoreDisplay.textContent = `Score: ${score}`;
+                        
+                        // Aumentar dificuldade gradualmente
+                        if (meteorSpawnRate > 20 && score % 50 === 0) {
+                            meteorSpawnRate -= 2;
+                        }
+                        
+                        return;
+                    }
+                });
+            });
+        }
+
+        // Criar efeito de explosão
+        function createExplosion(x, y) {
+            const explosion = document.createElement('div');
+            explosion.classList.add('explosion');
+            explosion.style.left = `${x - 20}px`;
+            explosion.style.top = `${y - 20}px`;
+            gameContainer.appendChild(explosion);
+            
+            setTimeout(() => {
+                gameContainer.removeChild(explosion);
+            }, 500);
+        }
+
+        // Perder uma vida
+        function loseLife() {
+            lives--;
+            livesDisplay.textContent = `Lives: ${lives}`;
+            
+            if (lives <= 0) {
+                gameOver();
+            } else {
+                // Piscar nave para indicar dano
+                player.style.opacity = '0.5';
+                setTimeout(() => {
+                    player.style.opacity = '1';
+                }, 500);
+            }
+        }
+
+        // Game over
+        function gameOver() {
+            gameRunning = false;
+            finalScore.textContent = `Your score: ${score}`;
+            gameOverScreen.style.display = 'flex';
+            cancelAnimationFrame(animationId);
+        }
+
+        // Reiniciar jogo
+        function restartGame() {
+            // Remover todos os lasers e meteoros
+            lasers.forEach(laser => gameContainer.removeChild(laser.element));
+            meteors.forEach(meteor => gameContainer.removeChild(meteor.element));
+            
+            lasers = [];
+            meteors = [];
+            
+            score = 0;
+            lives = 3;
+            gameRunning = true;
+            
+            scoreDisplay.textContent = `Score: ${score}`;
+            livesDisplay.textContent = `Lives: ${lives}`;
+            
+            gameOverScreen.style.display = 'none';
+            
+            playerX = window.innerWidth / 2;
+            player.style.left = `${playerX}px`;
+            player.style.opacity = '1';
+            
+            meteorSpawnRate = 80;
+            
+            gameLoop();
+        }
+
+        // Loop principal do jogo
+        function gameLoop() {
+            movePlayer();
+            updateLasers();
+            updateMeteors();
+            checkCollisions();
+            
+            frameCount++;
+            if (frameCount % meteorSpawnRate === 0) {
+                createMeteor();
+            }
+            
+            if (gameRunning) {
+                animationId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            keysPressed[e.key] = true;
+            
+            if (e.key === ' ' || e.key === 'ArrowUp') {
+                shootLaser();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keysPressed[e.key] = false;
+        });
+
+        leftButton.addEventListener('mousedown', () => {
+            keysPressed['ArrowLeft'] = true;
+        });
+        leftButton.addEventListener('mouseup', () => {
+            keysPressed['ArrowLeft'] = false;
+        });
+        leftButton.addEventListener('touchstart', () => {
+            keysPressed['ArrowLeft'] = true;
+        });
+        leftButton.addEventListener('touchend', () => {
+            keysPressed['ArrowLeft'] = false;
+        });
+
+        rightButton.addEventListener('mousedown', () => {
+            keysPressed['ArrowRight'] = true;
+        });
+        rightButton.addEventListener('mouseup', () => {
+            keysPressed['ArrowRight'] = false;
+        });
+        rightButton.addEventListener('touchstart', () => {
+            keysPressed['ArrowRight'] = true;
+        });
+        rightButton.addEventListener('touchend', () => {
+            keysPressed['ArrowRight'] = false;
+        });
+
+        shootButton.addEventListener('mousedown', shootLaser);
+        shootButton.addEventListener('touchstart', shootLaser);
+
+        restartButton.addEventListener('click', restartGame);
+
+        // Iniciar jogo
+        createStars();
+        gameLoop();
+    </script>
+</body>
+</html>
