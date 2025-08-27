@@ -3,8 +3,269 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Space Shooter</title>
-<link rel="stylesheet" href="style.css">
+    <title>Space Shooter - Boss Mode</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #000;
+            overflow: hidden;
+            height: 100vh;
+            touch-action: manipulation;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+        }
+        #stars {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .star {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+        }
+        #player {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            transition: transform 0.1s;
+        }
+        #player svg {
+            width: 100%;
+            height: 100%;
+            fill: #4FC3F7;
+        }
+        .laser {
+            position: absolute;
+            width: 3px;
+            height: 15px;
+            background-color: #00E5FF;
+            border-radius: 3px;
+            box-shadow: 0 0 10px #00B8D4;
+        }
+        .meteor {
+            position: absolute;
+            background-color: #795548;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 20px;
+        }
+        .boss {
+            position: absolute;
+            background: linear-gradient(45deg, #ff0000, #ff7700);
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 32px;
+            border: 3px solid #ffcc00;
+            box-shadow: 0 0 20px #ff5500;
+        }
+        .boss-health-bar {
+            position: absolute;
+            top: -20px;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background-color: #333;
+            border-radius: 2px;
+        }
+        .boss-health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #00ff00);
+            border-radius: 2px;
+            transition: width 0.2s;
+        }
+        .explosion {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background-color: #FF5722;
+            border-radius: 50%;
+            opacity: 0.8;
+            pointer-events: none;
+            animation: explode 0.5s forwards;
+        }
+        .shield-effect {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 3px solid #00FF00;
+            box-shadow: 0 0 20px #00FF00;
+            pointer-events: none;
+            animation: shieldPulse 1s infinite;
+        }
+        @keyframes explode {
+            0% { transform: scale(0.5); opacity: 0.8; }
+            100% { transform: scale(3); opacity: 0; }
+        }
+        @keyframes shieldPulse {
+            0% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.7; }
+        }
+        #score-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 18px;
+            font-family: 'Arial', sans-serif;
+            z-index: 100;
+        }
+        #lives-display {
+            position: absolute;
+            top: 50px;
+            left: 20px;
+            color: white;
+            font-size: 18px;
+            font-family: 'Arial', sans-serif;
+            z-index: 100;
+        }
+        #shield-display {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            color: #00FF00;
+            font-size: 18px;
+            font-family: 'Arial', sans-serif;
+            z-index: 100;
+        }
+        #boss-health-display {
+            position: absolute;
+            top: 110px;
+            left: 20px;
+            color: #FF5500;
+            font-size: 18px;
+            font-family: 'Arial', sans-serif;
+            z-index: 100;
+        }
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 1000;
+            font-size: 24px;
+        }
+        #restart-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #restart-button:hover {
+            background-color: #45a049;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 100;
+        }
+        .control-button {
+            width: 60px;
+            height: 60px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            user-select: none;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .control-button:active {
+            background-color: rgba(255, 255, 255, 0.4);
+        }
+        #powerup-button {
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: rgba(0, 255, 0, 0.3);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 20px;
+            user-select: none;
+            cursor: pointer;
+            z-index: 100;
+        }
+        #powerup-cooldown {
+            position: absolute;
+            bottom: 80px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: rgba(255, 0, 0, 0.5);
+            border-radius: 50%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 14px;
+            user-select: none;
+            z-index: 101;
+        }
+        @media (max-width: 600px) {
+            #player {
+                width: 40px;
+                height: 40px;
+            }
+            .meteor {
+                font-size: 16px;
+            }
+            .boss {
+                font-size: 24px;
+            }
+            .control-button {
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div id="game-container">
@@ -16,11 +277,18 @@
         </div>
         <div id="score-display">Score: 0</div>
         <div id="lives-display">Lives: 3</div>
+        <div id="shield-display">Shield: Ready</div>
+        <div id="boss-health-display">Boss: None</div>
+        
         <div id="game-over">
             <h1>Game Over</h1>
             <p id="final-score">Your score: 0</p>
             <button id="restart-button">Play Again</button>
         </div>
+        
+        <div id="powerup-button">S</div>
+        <div id="powerup-cooldown"></div>
+        
         <div id="controls">
             <div class="control-button" id="left-button">←</div>
             <div class="control-button" id="shoot-button">↑</div>
@@ -33,12 +301,16 @@
         const player = document.getElementById('player');
         const scoreDisplay = document.getElementById('score-display');
         const livesDisplay = document.getElementById('lives-display');
+        const shieldDisplay = document.getElementById('shield-display');
+        const bossHealthDisplay = document.getElementById('boss-health-display');
         const gameOverScreen = document.getElementById('game-over');
         const finalScore = document.getElementById('final-score');
         const restartButton = document.getElementById('restart-button');
         const leftButton = document.getElementById('left-button');
         const rightButton = document.getElementById('right-button');
         const shootButton = document.getElementById('shoot-button');
+        const powerupButton = document.getElementById('powerup-button');
+        const powerupCooldown = document.getElementById('powerup-cooldown');
         const starsContainer = document.getElementById('stars');
 
         let score = 0;
@@ -48,11 +320,18 @@
         let playerSpeed = 8;
         let lasers = [];
         let meteors = [];
+        let boss = null;
+        let bossHealth = 0;
         let animationId;
-        let meteorSpawnRate = 80; // frames between meteor spawns
+        let meteorSpawnRate = 80;
         let frameCount = 0;
         let keysPressed = {};
         let touchX = null;
+        let shieldActive = false;
+        let shieldCooldown = false;
+        let shieldDuration = 5000;
+        let shieldCooldownTime = 15000;
+        let powerupReady = true;
 
         // Criar estrelas de fundo
         function createStars() {
@@ -78,9 +357,7 @@
                 playerX += playerSpeed;
             }
 
-            // Limitar movimento às bordas da tela
             playerX = Math.max(25, Math.min(window.innerWidth - 25, playerX));
-
             player.style.left = `${playerX}px`;
         }
 
@@ -124,13 +401,105 @@
             });
         }
 
+        // Criar boss
+        function createBoss() {
+            if (boss) return;
+            
+            bossHealth = 1000;
+            const bossElement = document.createElement('div');
+            bossElement.classList.add('boss');
+            bossElement.style.width = '120px';
+            bossElement.style.height = '120px';
+            bossElement.style.left = `${Math.random() * (window.innerWidth - 120)}px`;
+            bossElement.style.top = '-120px';
+            bossElement.innerHTML = '👾';
+            
+            // Adicionar barra de saúde
+            const healthBar = document.createElement('div');
+            healthBar.classList.add('boss-health-bar');
+            const healthFill = document.createElement('div');
+            healthFill.classList.add('boss-health-fill');
+            healthFill.style.width = '100%';
+            healthBar.appendChild(healthFill);
+            bossElement.appendChild(healthBar);
+            
+            gameContainer.appendChild(bossElement);
+            
+            boss = {
+                element: bossElement,
+                healthBar: healthFill,
+                x: parseFloat(bossElement.style.left),
+                y: -120,
+                speed: 2,
+                width: 120,
+                height: 120,
+                health: bossHealth
+            };
+            
+            bossHealthDisplay.textContent = `Boss: ${boss.health} HP`;
+        }
+
+        // Ativar escudo
+        function activateShield() {
+            if (shieldActive || shieldCooldown || !gameRunning) return;
+            
+            shieldActive = true;
+            shieldCooldown = true;
+            powerupReady = false;
+            powerupButton.style.display = 'none';
+            powerupCooldown.style.display = 'flex';
+            
+            // Efeito visual do escudo
+            const shieldEffect = document.createElement('div');
+            shieldEffect.classList.add('shield-effect');
+            shieldEffect.style.left = `${playerX - 35}px`;
+            shieldEffect.style.bottom = '15px';
+            gameContainer.appendChild(shieldEffect);
+            
+            shieldDisplay.textContent = 'Shield: Active';
+            shieldDisplay.style.color = '#00FF00';
+            
+            // Duração do escudo
+            setTimeout(() => {
+                shieldActive = false;
+                gameContainer.removeChild(shieldEffect);
+                shieldDisplay.textContent = 'Shield: Cooldown';
+                shieldDisplay.style.color = '#FF5500';
+                
+                // Temporizador de cooldown
+                let cooldown = shieldCooldownTime / 1000;
+                const cooldownInterval = setInterval(() => {
+                    cooldown--;
+                    powerupCooldown.textContent = cooldown;
+                    
+                    if (cooldown <= 0) {
+                        clearInterval(cooldownInterval);
+                        shieldCooldown = false;
+                        powerupReady = true;
+                        powerupButton.style.display = 'flex';
+                        powerupCooldown.style.display = 'none';
+                        shieldDisplay.textContent = 'Shield: Ready';
+                        shieldDisplay.style.color = '#00FF00';
+                    }
+                }, 1000);
+            }, shieldDuration);
+        }
+
+        // Destruir todos os meteoros
+        function destroyAllMeteors() {
+            meteors.forEach((meteor) => {
+                createExplosion(meteor.x + meteor.width/2, meteor.y);
+                gameContainer.removeChild(meteor.element);
+            });
+            meteors = [];
+        }
+
         // Atualizar lasers
         function updateLasers() {
             lasers.forEach((laser, index) => {
                 laser.y += laser.speed;
                 laser.element.style.bottom = `${window.innerHeight - laser.y}px`;
                 
-                // Remover lasers que saíram da tela
                 if (laser.y < 0) {
                     gameContainer.removeChild(laser.element);
                     lasers.splice(index, 1);
@@ -144,37 +513,61 @@
                 meteor.y += meteor.speed;
                 meteor.element.style.top = `${meteor.y}px`;
                 
-                // Verificar se o meteoro saiu da tela
                 if (meteor.y > window.innerHeight) {
                     gameContainer.removeChild(meteor.element);
                     meteors.splice(index, 1);
                 }
                 
-                // Verificar colisão com a nave
-                if (
-                    meteor.y + meteor.height > window.innerHeight - 70 &&
+                if (meteor.y + meteor.height > window.innerHeight - 70 &&
                     meteor.x + meteor.width > playerX - 25 &&
-                    meteor.x < playerX + 25
-                ) {
-                    // Colisão com a nave
-                    createExplosion(meteor.x + meteor.width/2, meteor.y);
-                    gameContainer.removeChild(meteor.element);
-                    meteors.splice(index, 1);
-                    loseLife();
+                    meteor.x < playerX + 25) {
+                    
+                    if (!shieldActive) {
+                        createExplosion(meteor.x + meteor.width/2, meteor.y);
+                        gameContainer.removeChild(meteor.element);
+                        meteors.splice(index, 1);
+                        loseLife();
+                    }
                 }
             });
         }
 
-        // Verificar colisões entre lasers e meteoros
+        // Atualizar boss
+        function updateBoss() {
+            if (!boss) return;
+            
+            boss.y += boss.speed;
+            boss.element.style.top = `${boss.y}px`;
+            
+            if (boss.y > window.innerHeight) {
+                gameContainer.removeChild(boss.element);
+                boss = null;
+                bossHealthDisplay.textContent = 'Boss: None';
+            }
+            
+            if (boss.y + boss.height > window.innerHeight - 70 &&
+                boss.x + boss.width > playerX - 25 &&
+                boss.x < playerX + 25) {
+                
+                if (!shieldActive) {
+                    createExplosion(boss.x + boss.width/2, boss.y);
+                    gameContainer.removeChild(boss.element);
+                    boss = null;
+                    bossHealthDisplay.textContent = 'Boss: None';
+                    loseLife();
+                }
+            }
+        }
+
+        // Verificar colisões
         function checkCollisions() {
+            // Colisões lasers-meteoros
             lasers.forEach((laser, laserIndex) => {
                 meteors.forEach((meteor, meteorIndex) => {
-                    if (
-                        laser.x > meteor.x - 5 &&
+                    if (laser.x > meteor.x - 5 &&
                         laser.x < meteor.x + meteor.width + 5 &&
-                        laser.y < meteor.y + meteor.height
-                    ) {
-                        // Colisão detectada
+                        laser.y < meteor.y + meteor.height) {
+                        
                         createExplosion(meteor.x + meteor.width/2, meteor.y);
                         gameContainer.removeChild(meteor.element);
                         meteors.splice(meteorIndex, 1);
@@ -185,18 +578,45 @@
                         score += 10;
                         scoreDisplay.textContent = `Score: ${score}`;
                         
-                        // Aumentar dificuldade gradualmente
+                        if (score % 500 === 0 && !boss) {
+                            createBoss();
+                        }
+                        
                         if (meteorSpawnRate > 20 && score % 50 === 0) {
                             meteorSpawnRate -= 2;
                         }
-                        
-                        return;
                     }
                 });
+                
+                // Colisões lasers-boss
+                if (boss && laser.x > boss.x - 5 &&
+                    laser.x < boss.x + boss.width + 5 &&
+                    laser.y < boss.y + boss.height) {
+                    
+                    boss.health -= 20;
+                    boss.healthBar.style.width = `${(boss.health / 1000) * 100}%`;
+                    bossHealthDisplay.textContent = `Boss: ${boss.health} HP`;
+                    
+                    createExplosion(laser.x, boss.y + boss.height/2);
+                    gameContainer.removeChild(laser.element);
+                    lasers.splice(laserIndex, 1);
+                    
+                    if (boss.health <= 0) {
+                        createExplosion(boss.x + boss.width/2, boss.y + boss.height/2);
+                        gameContainer.removeChild(boss.element);
+                        boss = null;
+                        score += 200;
+                        scoreDisplay.textContent = `Score: ${score}`;
+                        bossHealthDisplay.textContent = 'Boss: Defeated! +200';
+                        setTimeout(() => {
+                            bossHealthDisplay.textContent = 'Boss: None';
+                        }, 2000);
+                    }
+                }
             });
         }
 
-        // Criar efeito de explosão
+        // Criar explosão
         function createExplosion(x, y) {
             const explosion = document.createElement('div');
             explosion.classList.add('explosion');
@@ -205,11 +625,13 @@
             gameContainer.appendChild(explosion);
             
             setTimeout(() => {
-                gameContainer.removeChild(explosion);
+                if (explosion.parentNode === gameContainer) {
+                    gameContainer.removeChild(explosion);
+                }
             }, 500);
         }
 
-        // Perder uma vida
+        // Perder vida
         function loseLife() {
             lives--;
             livesDisplay.textContent = `Lives: ${lives}`;
@@ -217,7 +639,6 @@
             if (lives <= 0) {
                 gameOver();
             } else {
-                // Piscar nave para indicar dano
                 player.style.opacity = '0.5';
                 setTimeout(() => {
                     player.style.opacity = '1';
@@ -235,12 +656,24 @@
 
         // Reiniciar jogo
         function restartGame() {
-            // Remover todos os lasers e meteoros
-            lasers.forEach(laser => gameContainer.removeChild(laser.element));
-            meteors.forEach(meteor => gameContainer.removeChild(meteor.element));
+            lasers.forEach(laser => {
+                if (laser.element.parentNode === gameContainer) {
+                    gameContainer.removeChild(laser.element);
+                }
+            });
+            meteors.forEach(meteor => {
+                if (meteor.element.parentNode === gameContainer) {
+                    gameContainer.removeChild(meteor.element);
+                }
+            });
+            
+            if (boss) {
+                gameContainer.removeChild(boss.element);
+            }
             
             lasers = [];
             meteors = [];
+            boss = null;
             
             score = 0;
             lives = 3;
@@ -248,6 +681,9 @@
             
             scoreDisplay.textContent = `Score: ${score}`;
             livesDisplay.textContent = `Lives: ${lives}`;
+            shieldDisplay.textContent = 'Shield: Ready';
+            shieldDisplay.style.color = '#00FF00';
+            bossHealthDisplay.textContent = 'Boss: None';
             
             gameOverScreen.style.display = 'none';
             
@@ -256,15 +692,21 @@
             player.style.opacity = '1';
             
             meteorSpawnRate = 80;
+            shieldActive = false;
+            shieldCooldown = false;
+            powerupReady = true;
+            powerupButton.style.display = 'flex';
+            powerupCooldown.style.display = 'none';
             
             gameLoop();
         }
 
-        // Loop principal do jogo
+        // Loop principal
         function gameLoop() {
             movePlayer();
             updateLasers();
             updateMeteors();
+            updateBoss();
             checkCollisions();
             
             frameCount++;
@@ -281,8 +723,16 @@
         document.addEventListener('keydown', (e) => {
             keysPressed[e.key] = true;
             
-            if (e.key === ' ' || e.key === 'ArrowUp') {
+            if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') {
                 shootLaser();
+            }
+            
+            if (e.key === 's' && powerupReady) {
+                activateShield();
+            }
+            
+            if (e.key === 'd') {
+                destroyAllMeteors();
             }
         });
 
@@ -290,6 +740,7 @@
             keysPressed[e.key] = false;
         });
 
+        // Controles touch
         leftButton.addEventListener('mousedown', () => {
             keysPressed['ArrowLeft'] = true;
         });
@@ -318,6 +769,9 @@
 
         shootButton.addEventListener('mousedown', shootLaser);
         shootButton.addEventListener('touchstart', shootLaser);
+
+        powerupButton.addEventListener('click', activateShield);
+        powerupButton.addEventListener('touchstart', activateShield);
 
         restartButton.addEventListener('click', restartGame);
 
