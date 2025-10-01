@@ -387,7 +387,7 @@ function createMeteor() {
     meteor.style.height = `${size}px`;
     meteor.style.left = `${Math.random() * (window.innerWidth - size)}px`;
     meteor.style.top = `-${size}px`;
-    meteor.innerHTML = '🪨';
+    meteor.innerHTML = '🛸';
     gameContainer.appendChild(meteor);
 
     meteors.push({
@@ -411,7 +411,7 @@ function createBoss() {
     bossElement.style.height = '120px';
     bossElement.style.left = '0px'; // inicia no canto esquerdo
     bossElement.style.top = '20px'; // fixa no topo da tela
-    bossElement.innerHTML = '👾';
+    bossElement.innerHTML = '👽';
 
     // Barra de saúde do boss
     const healthBar = document.createElement('div');
@@ -843,7 +843,6 @@ bossTimer = setTimeout(() => {
 }, bossTimeLimit);
 
 clearTimeout(bossTimer);
-
 
 </script>
 </body>
