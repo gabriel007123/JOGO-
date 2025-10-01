@@ -297,110 +297,14 @@
     </div>
 
     <script>
-const gameContainer = document.getElementById('game-container');
-const player = document.getElementById('player');
-const scoreDisplay = document.getElementById('score-display');
-const livesDisplay = document.getElementById('lives-display');
-const shieldDisplay = document.getElementById('shield-display');
-const bossHealthDisplay = document.getElementById('boss-health-display');
-const gameOverScreen = document.getElementById('game-over');
-const finalScore = document.getElementById('final-score');
-const restartButton = document.getElementById('restart-button');
-const leftButton = document.getElementById('left-button');
-const rightButton = document.getElementById('right-button');
-const shootButton = document.getElementById('shoot-button');
-const powerupButton = document.getElementById('powerup-button');
-const powerupCooldown = document.getElementById('powerup-cooldown');
-const starsContainer = document.getElementById('stars');
+// ... (mantém as variáveis e constantes iniciais que você já tem)
+let bossProjectiles = [];
+let bossShootInterval;
+let bossTimer;
+let bossTimeLimit = 90; // segundos
+let bossTimeLeft = bossTimeLimit;
 
-let score = 0;
-let lives = 3;
-let gameRunning = true;
-let playerX = window.innerWidth / 2;
-const playerSpeed = 8;
-let lasers = [];
-let meteors = [];
-let boss = null;
-let bossHealth = 0;
-let animationId;
-let meteorSpawnRate = 80;
-let frameCount = 0;
-let keysPressed = {};
-let shieldActive = false;
-let shieldCooldown = false;
-const shieldDuration = 5000;
-const shieldCooldownTime = 15000;
-let powerupReady = true;
-
-// Criar estrelas de fundo
-function createStars() {
-    const starCount = 200;
-    for (let i = 0; i < starCount; i++) {
-        const star = document.createElement('div');
-        star.classList.add('star');
-        star.style.width = `${Math.random() * 3}px`;
-        star.style.height = star.style.width;
-        star.style.left = `${Math.random() * 100}%`;
-        star.style.top = `${Math.random() * 100}%`;
-        star.style.opacity = Math.random();
-        starsContainer.appendChild(star);
-    }
-}
-
-// Movimento da nave
-function movePlayer() {
-    if (keysPressed['ArrowLeft'] || keysPressed['a']) {
-        playerX -= playerSpeed;
-    }
-    if (keysPressed['ArrowRight'] || keysPressed['d']) {
-        playerX += playerSpeed;
-    }
-
-    playerX = Math.max(25, Math.min(window.innerWidth - 25, playerX));
-    player.style.left = `${playerX}px`;
-}
-
-// Disparar lasers
-function shootLaser() {
-    if (!gameRunning) return;
-
-    const laser = document.createElement('div');
-    laser.classList.add('laser');
-    laser.style.left = `${playerX}px`;
-    laser.style.bottom = '80px';
-    gameContainer.appendChild(laser);
-
-    lasers.push({
-        element: laser,
-        x: playerX,
-        y: window.innerHeight - 80,
-        speed: -10
-    });
-}
-
-// Criar meteoros
-function createMeteor() {
-    const size = 20 + Math.random() * 30;
-    const meteor = document.createElement('div');
-    meteor.classList.add('meteor');
-    meteor.style.width = `${size}px`;
-    meteor.style.height = `${size}px`;
-    meteor.style.left = `${Math.random() * (window.innerWidth - size)}px`;
-    meteor.style.top = `-${size}px`;
-    meteor.innerHTML = '🪨';
-    gameContainer.appendChild(meteor);
-
-    meteors.push({
-        element: meteor,
-        x: parseFloat(meteor.style.left),
-        y: -size,
-        speed: 3 + Math.random() * 3,
-        width: size,
-        height: size
-    });
-}
-
-// Criar boss e movimento lateral ping-pong
+// Adiciona no createBoss()
 function createBoss() {
     if (boss) return;
 
@@ -409,11 +313,10 @@ function createBoss() {
     bossElement.classList.add('boss');
     bossElement.style.width = '120px';
     bossElement.style.height = '120px';
-    bossElement.style.left = '0px'; // inicia no canto esquerdo
-    bossElement.style.top = '20px'; // fixa no topo da tela
+    bossElement.style.left = '0px';
+    bossElement.style.top = '20px';
     bossElement.innerHTML = '👾';
 
-    // Barra de saúde do boss
     const healthBar = document.createElement('div');
     healthBar.classList.add('boss-health-bar');
     const healthFill = document.createElement('div');
@@ -429,293 +332,148 @@ function createBoss() {
         healthBar: healthFill,
         x: 0,
         y: 20,
-        speed: 3, // velocidade do movimento lateral
-        direction: 1, // 1 para direita, -1 para esquerda
+        speed: 3,
+        direction: 1,
         width: 120,
         height: 120,
         health: bossHealth
     };
 
     bossHealthDisplay.textContent = `Boss: ${boss.health} HP`;
+
+    // Inicia disparos e contagem regressiva
+    startBossAttacks();
+    startBossTimer();
 }
 
-// Atualizar lasers
-function updateLasers() {
-    lasers.forEach((laser, index) => {
-        laser.y += laser.speed;
-        laser.element.style.bottom = `${window.innerHeight - laser.y}px`;
+// Atirar do boss
+function bossShoot() {
+    if (!boss || !gameRunning) return;
 
-        if (laser.y < 0) {
-            gameContainer.removeChild(laser.element);
-            lasers.splice(index, 1);
-        }
+    const projectile = document.createElement('div');
+    projectile.classList.add('boss-projectile');
+    projectile.style.left = `${boss.x + boss.width / 2}px`;
+    projectile.style.top = `${boss.y + boss.height}px`;
+    gameContainer.appendChild(projectile);
+
+    bossProjectiles.push({
+        element: projectile,
+        x: boss.x + boss.width / 2,
+        y: boss.y + boss.height,
+        speed: 5
     });
 }
 
-// Atualizar meteoros
-function updateMeteors() {
-    meteors.forEach((meteor, index) => {
-        meteor.y += meteor.speed;
-        meteor.element.style.top = `${meteor.y}px`;
+// Atualizar projéteis do boss
+function updateBossProjectiles() {
+    bossProjectiles.forEach((proj, index) => {
+        proj.y += proj.speed;
+        proj.element.style.top = `${proj.y}px`;
 
-        if (meteor.y > window.innerHeight) {
-            gameContainer.removeChild(meteor.element);
-            meteors.splice(index, 1);
+        // Remove se sair da tela
+        if (proj.y > window.innerHeight) {
+            proj.element.remove();
+            bossProjectiles.splice(index, 1);
+            return;
         }
 
+        // Colisão com o jogador
         if (
-            meteor.y + meteor.height > window.innerHeight - 70 &&
-            meteor.x + meteor.width > playerX - 25 &&
-            meteor.x < playerX + 25
+            proj.y > window.innerHeight - 100 &&
+            proj.x > playerX - 25 &&
+            proj.x < playerX + 25
         ) {
             if (!shieldActive) {
-                createExplosion(meteor.x + meteor.width / 2, meteor.y);
-                gameContainer.removeChild(meteor.element);
-                meteors.splice(index, 1);
+                createExplosion(proj.x, proj.y);
+                proj.element.remove();
+                bossProjectiles.splice(index, 1);
                 loseLife();
             }
         }
     });
 }
 
-// Atualizar boss (movimento lateral + colisão)
-function updateBoss() {
-    if (!boss) return;
+// Timer de 90s para o boss
+function startBossTimer() {
+    bossTimeLeft = bossTimeLimit;
+    bossHealthDisplay.textContent = `Boss: ${boss.health} HP | Time: ${bossTimeLeft}s`;
 
-    // Movimento lateral ping-pong
-    boss.x += boss.speed * boss.direction;
-
-    // Troca de direção nas bordas da tela
-    if (boss.x <= 0) {
-        boss.direction = 1;
-        boss.x = 0;
-    } else if (boss.x + boss.width >= window.innerWidth) {
-        boss.direction = -1;
-        boss.x = window.innerWidth - boss.width;
-    }
-
-    boss.element.style.left = `${boss.x}px`;
-    boss.element.style.top = `${boss.y}px`;
-
-    // Colisão com jogador (na horizontal fixa)
-    if (
-        boss.y + boss.height > window.innerHeight - 70 &&
-        boss.x + boss.width > playerX - 25 &&
-        boss.x < playerX + 25
-    ) {
-        if (!shieldActive) {
-            createExplosion(boss.x + boss.width / 2, boss.y);
-            gameContainer.removeChild(boss.element);
-            boss = null;
-            bossHealthDisplay.textContent = 'Boss: None';
-            loseLife();
+    bossTimer = setInterval(() => {
+        bossTimeLeft--;
+        if (boss) {
+            bossHealthDisplay.textContent = `Boss: ${boss.health} HP | Time: ${bossTimeLeft}s`;
         }
-    }
+
+        if (bossTimeLeft <= 0 && boss) {
+            clearInterval(bossTimer);
+            stopBossAttacks();
+            createExplosion(boss.x + boss.width / 2, boss.y + boss.height / 2);
+            gameOver(); // jogador perde
+        }
+    }, 1000);
 }
 
-// Verificar colisões
-function checkCollisions() {
-    lasers.forEach((laser, laserIndex) => {
-        meteors.forEach((meteor, meteorIndex) => {
-            if (
-                laser.x > meteor.x - 5 &&
-                laser.x < meteor.x + meteor.width + 5 &&
-                laser.y < meteor.y + meteor.height
-            ) {
-                createExplosion(meteor.x + meteor.width / 2, meteor.y);
-                gameContainer.removeChild(meteor.element);
-                meteors.splice(meteorIndex, 1);
-
-                gameContainer.removeChild(laser.element);
-                lasers.splice(laserIndex, 1);
-
-                score += 10;
-                scoreDisplay.textContent = `Score: ${score}`;
-
-                if (score % 500 === 0 && !boss) {
-                    createBoss();
-                }
-
-                if (meteorSpawnRate > 20 && score % 50 === 0) {
-                    meteorSpawnRate -= 2;
-                }
-            }
-        });
-
-        if (
-            boss &&
-            laser.x > boss.x - 5 &&
-            laser.x < boss.x + boss.width + 5 &&
-            laser.y < boss.y + boss.height
-        ) {
-            boss.health -= 20;
-            boss.healthBar.style.width = `${(boss.health / 1000) * 100}%`;
-            bossHealthDisplay.textContent = `Boss: ${boss.health} HP`;
-
-            createExplosion(laser.x, boss.y + boss.height / 2);
-            gameContainer.removeChild(laser.element);
-            lasers.splice(laserIndex, 1);
-
-            if (boss.health <= 0) {
-                createExplosion(boss.x + boss.width / 2, boss.y + boss.height / 2);
-                gameContainer.removeChild(boss.element);
-                boss = null;
-                score += 200;
-                scoreDisplay.textContent = `Score: ${score}`;
-                bossHealthDisplay.textContent = 'Boss: Defeated! +200';
-                setTimeout(() => {
-                    bossHealthDisplay.textContent = 'Boss: None';
-                }, 2000);
-            }
-        }
-    });
+// Iniciar e parar ataques do boss
+function startBossAttacks() {
+    bossShootInterval = setInterval(bossShoot, 2000); // dispara a cada 2s
 }
 
-// Criar explosão
-function createExplosion(x, y) {
-    const explosion = document.createElement('div');
-    explosion.classList.add('explosion');
-    explosion.style.left = `${x - 20}px`;
-    explosion.style.top = `${y - 20}px`;
-    gameContainer.appendChild(explosion);
-
-    setTimeout(() => {
-        if (explosion.parentNode === gameContainer) {
-            gameContainer.removeChild(explosion);
-        }
-    }, 500);
+function stopBossAttacks() {
+    clearInterval(bossShootInterval);
+    bossProjectiles.forEach(p => p.element.remove());
+    bossProjectiles = [];
 }
 
-// Perder vida
-function loseLife() {
-    lives--;
-    livesDisplay.textContent = `Lives: ${lives}`;
-
-    if (lives <= 0) {
-        gameOver();
-    } else {
-        player.style.opacity = '0.5';
-        setTimeout(() => {
-            player.style.opacity = '1';
-        }, 500);
-    }
-}
-
-// Game over
-function gameOver() {
-    gameRunning = false;
-    finalScore.textContent = `Your score: ${score}`;
-    gameOverScreen.style.display = 'flex';
-    cancelAnimationFrame(animationId);
-}
-
-// Reiniciar jogo
-function restartGame() {
-    lasers.forEach(laser => {
-        if (laser.element.parentNode === gameContainer) {
-            gameContainer.removeChild(laser.element);
-        }
-    });
-    meteors.forEach(meteor => {
-        if (meteor.element.parentNode === gameContainer) {
-            gameContainer.removeChild(meteor.element);
-        }
-    });
-
-    if (boss) {
-        gameContainer.removeChild(boss.element);
-    }
-
-    lasers = [];
-    meteors = [];
+// Ao derrotar o boss
+function defeatBoss() {
+    createExplosion(boss.x + boss.width / 2, boss.y + boss.height / 2);
+    gameContainer.removeChild(boss.element);
+    stopBossAttacks();
+    clearInterval(bossTimer);
     boss = null;
-
-    score = 0;
-    lives = 3;
-    gameRunning = true;
-
+    score += 200;
     scoreDisplay.textContent = `Score: ${score}`;
-    livesDisplay.textContent = `Lives: ${lives}`;
-    shieldDisplay.textContent = 'Shield: Ready';
-    shieldDisplay.style.color = '#00FF00';
-    bossHealthDisplay.textContent = 'Boss: None';
-
-    gameOverScreen.style.display = 'none';
-
-    playerX = window.innerWidth / 2;
-    player.style.left = `${playerX}px`;
-    player.style.opacity = '1';
-
-    meteorSpawnRate = 80;
-    shieldActive = false;
-    shieldCooldown = false;
-    powerupReady = true;
-    powerupButton.style.display = 'flex';
-    powerupCooldown.style.display = 'none';
-
-    gameLoop();
-}
-
-// Ativar escudo
-function activateShield() {
-    if (shieldActive || shieldCooldown || !gameRunning) return;
-
-    shieldActive = true;
-    shieldCooldown = true;
-    powerupReady = false;
-    powerupButton.style.display = 'none';
-    powerupCooldown.style.display = 'flex';
-
-    const shieldEffect = document.createElement('div');
-    shieldEffect.classList.add('shield-effect');
-    shieldEffect.style.left = `${playerX - 35}px`;
-    shieldEffect.style.bottom = '15px';
-    gameContainer.appendChild(shieldEffect);
-
-    shieldDisplay.textContent = 'Shield: Active';
-    shieldDisplay.style.color = '#00FF00';
-
+    bossHealthDisplay.textContent = 'Boss: Defeated! +200';
     setTimeout(() => {
-        shieldActive = false;
-        gameContainer.removeChild(shieldEffect);
-        shieldDisplay.textContent = 'Shield: Cooldown';
-        shieldDisplay.style.color = '#FF5500';
-
-        let cooldown = shieldCooldownTime / 1000;
-        const cooldownInterval = setInterval(() => {
-            cooldown--;
-            powerupCooldown.textContent = cooldown;
-
-            if (cooldown <= 0) {
-                clearInterval(cooldownInterval);
-                shieldCooldown = false;
-                powerupReady = true;
-                powerupButton.style.display = 'flex';
-                powerupCooldown.style.display = 'none';
-                shieldDisplay.textContent = 'Shield: Ready';
-                shieldDisplay.style.color = '#00FF00';
-            }
-        }, 1000);
-    }, shieldDuration);
+        bossHealthDisplay.textContent = 'Boss: None';
+    }, 2000);
 }
 
-// Destroy all meteors (pode chamar com uma tecla ou botão)
-function destroyAllMeteors() {
-    meteors.forEach((meteor) => {
-        createExplosion(meteor.x + meteor.width / 2, meteor.y);
-        if (meteor.element.parentNode === gameContainer) {
-            gameContainer.removeChild(meteor.element);
-        }
-    });
-    meteors = [];
+// Atualize dentro de checkCollisions()
+if (boss &&
+    laser.x > boss.x - 5 &&
+    laser.x < boss.x + boss.width + 5 &&
+    laser.y < boss.y + boss.height
+) {
+    boss.health -= 20;
+    boss.healthBar.style.width = `${(boss.health / 1000) * 100}%`;
+    bossHealthDisplay.textContent = `Boss: ${boss.health} HP | Time: ${bossTimeLeft}s`;
+
+    createExplosion(laser.x, boss.y + boss.height / 2);
+    gameContainer.removeChild(laser.element);
+    lasers.splice(laserIndex, 1);
+
+    if (boss.health <= 0) {
+        defeatBoss();
+    }
 }
 
-// Loop principal do jogo
+// Atualize em restartGame()
+function restartGame() {
+    // ... (resto do reset normal)
+    stopBossAttacks();
+    clearInterval(bossTimer);
+    bossTimeLeft = bossTimeLimit;
+    // ...
+}
+
+// Dentro do gameLoop()
 function gameLoop() {
     movePlayer();
     updateLasers();
     updateMeteors();
     updateBoss();
+    updateBossProjectiles(); // <= importante
     checkCollisions();
 
     frameCount++;
@@ -727,67 +485,6 @@ function gameLoop() {
         animationId = requestAnimationFrame(gameLoop);
     }
 }
-
-// Event listeners
-document.addEventListener('keydown', (e) => {
-    keysPressed[e.key] = true;
-
-    if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') {
-        shootLaser();
-    }
-
-    if (e.key === 's' && powerupReady) {
-        activateShield();
-    }
-
-    if (e.key === 'd') {
-        destroyAllMeteors();
-    }
-});
-
-document.addEventListener('keyup', (e) => {
-    keysPressed[e.key] = false;
-});
-
-// Controles touch (botões)
-leftButton.addEventListener('mousedown', () => {
-    keysPressed['ArrowLeft'] = true;
-});
-leftButton.addEventListener('mouseup', () => {
-    keysPressed['ArrowLeft'] = false;
-});
-leftButton.addEventListener('touchstart', () => {
-    keysPressed['ArrowLeft'] = true;
-});
-leftButton.addEventListener('touchend', () => {
-    keysPressed['ArrowLeft'] = false;
-});
-
-rightButton.addEventListener('mousedown', () => {
-    keysPressed['ArrowRight'] = true;
-});
-rightButton.addEventListener('mouseup', () => {
-    keysPressed['ArrowRight'] = false;
-});
-rightButton.addEventListener('touchstart', () => {
-    keysPressed['ArrowRight'] = true;
-});
-rightButton.addEventListener('touchend', () => {
-    keysPressed['ArrowRight'] = false;
-});
-
-shootButton.addEventListener('mousedown', shootLaser);
-shootButton.addEventListener('touchstart', shootLaser);
-
-powerupButton.addEventListener('click', activateShield);
-powerupButton.addEventListener('touchstart', activateShield);
-
-restartButton.addEventListener('click', restartGame);
-
-// Iniciar jogo
-createStars();
-gameLoop();
-
 </script>
 </body>
 </html>
