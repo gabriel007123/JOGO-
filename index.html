@@ -779,75 +779,7 @@
         createStars();
         gameLoop();
 
-       function updateBoss() {
-    if (!boss) return;
-    
-    // Movimento vertical (descer até uma posição fixa)
-    if (boss.y < 50) {
-        boss.y += boss.speed;
-    } else {
-        // Movimento horizontal
-        boss.x += boss.directionX * 4; // velocidade horizontal
-
-        // Rebater nas bordas
-        if (boss.x <= 0) {
-            boss.x = 0;
-            boss.directionX = 1;
-        } else if (boss.x + boss.width >= window.innerWidth) {
-            boss.x = window.innerWidth - boss.width;
-            boss.directionX = -1;
-        }
-    }
-    
-    boss.element.style.top = `${boss.y}px`;
-    boss.element.style.left = `${boss.x}px`;
-    
-    // Atualizar lasers do boss
-    boss.lasers.forEach((laser, index) => {
-        laser.y += laser.speed;
-        laser.element.style.top = `${laser.y}px`;
-        
-        // Remover laser se sair da tela
-        if (laser.y > window.innerHeight) {
-            gameContainer.removeChild(laser.element);
-            boss.lasers.splice(index, 1);
-        }
-        
-        // Colisão com o jogador
-        if (laser.y + 15 > window.innerHeight - 70 &&
-            laser.x > playerX - 25 &&
-            laser.x < playerX + 25) {
-            
-            if (!shieldActive) {
-                createExplosion(laser.x, laser.y);
-                gameContainer.removeChild(laser.element);
-                boss.lasers.splice(index, 1);
-                loseLife();
-            }
-        }
-    });
-    
-    // Atirar a cada 60 frames (~1 segundo a 60fps)
-    boss.laserCooldown = (boss.laserCooldown || 0) + 1;
-    if (boss.laserCooldown >= 60) {
-        bossShootLaser();
-        boss.laserCooldown = 0;
-    }
-    
-    // Colisão boss com jogador (se encostar)
-    if (boss.y + boss.height > window.innerHeight - 70 &&
-        boss.x + boss.width > playerX - 25 &&
-        boss.x < playerX + 25) {
-        
-        if (!shieldActive) {
-            createExplosion(boss.x + boss.width/2, boss.y);
-            gameContainer.removeChild(boss.element);
-            boss = null;
-            bossHealthDisplay.textContent = 'Boss: None';
-            loseLife();
-        }
-    }
-}
+       
 
     </script>
 </body>
