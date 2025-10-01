@@ -788,6 +788,63 @@ restartButton.addEventListener('click', restartGame);
 createStars();
 gameLoop();
 
+let bossProjectiles = [];
+let bossAttackRate = 90; // a cada 90 frames (~1.5s)
+let bossAttackFrameCounter = 0;
+let bossTimer = null;
+let bossTimeLimit = 90000; // 90 segundos em milissegundos
+
+function bossShoot() {
+    const projectile = document.createElement('div');
+    projectile.classList.add('boss-projectile');
+    projectile.style.left = `${boss.x + boss.width / 2}px`;
+    projectile.style.top = `${boss.y + boss.height}px`;
+    gameContainer.appendChild(projectile);
+
+    bossProjectiles.push({
+        element: projectile,
+        x: boss.x + boss.width / 2,
+        y: boss.y + boss.height,
+        speed: 5
+    });
+}
+
+function updateBossProjectiles() {
+    bossProjectiles.forEach((proj, index) => {
+        proj.y += proj.speed;
+        proj.element.style.top = `${proj.y}px`;
+
+        // Remover se sair da tela
+        if (proj.y > window.innerHeight) {
+            gameContainer.removeChild(proj.element);
+            bossProjectiles.splice(index, 1);
+        }
+
+        // Colisão com o jogador
+        if (
+            proj.y > window.innerHeight - 70 &&
+            proj.x > playerX - 20 &&
+            proj.x < playerX + 20
+        ) {
+            if (!shieldActive) {
+                createExplosion(proj.x, proj.y);
+                gameContainer.removeChild(proj.element);
+                bossProjectiles.splice(index, 1);
+                loseLife();
+            }
+        }
+    });
+}
+
+bossTimer = setTimeout(() => {
+    if (boss) {
+        gameOver(); // Se o boss ainda estiver vivo após 90s, fim de jogo
+    }
+}, bossTimeLimit);
+
+clearTimeout(bossTimer);
+
+
 </script>
 </body>
 </html>

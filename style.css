@@ -148,3 +148,11 @@
                 font-size: 16px;
             }
         }
+    .boss-projectile {
+    position: absolute;
+    width: 10px;
+    height: 20px;
+    background-color: red;
+    border-radius: 50%;
+    z-index: 5;
+}
